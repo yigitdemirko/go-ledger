@@ -375,3 +375,11 @@ func ChangePassword(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Password updated successfully"})
 }
+
+// HealthCheck tells us if the server is running
+func HealthCheck(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"status": "ok",
+		"time":   time.Now().Format(time.RFC3339),
+	})
+}

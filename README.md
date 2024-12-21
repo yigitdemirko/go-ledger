@@ -4,13 +4,28 @@ A Go-based ledger system for managing user balances and transactions.
 
 ## Prerequisites
 
-- Go 1.21 or higher
-- PostgreSQL
+- Docker Desktop
+- PostgreSQL (only if running locally without Docker)
+- Go 1.21 or higher (only if running locally without Docker)
 
-## Environment Variables
+## Quick Start with Docker
 
-Create a `.env` file in the root directory with the following variables:
+1. Clone the repository:
+```bash
+git clone https://github.com/yigitdemirko/go-ledger.git
+cd go-ledger
+```
 
+2. Start the application:
+```bash
+docker compose up --build
+```
+
+The API will be available at `http://localhost:8080`
+
+## Running Locally (Without Docker)
+
+1. Create a `.env` file:
 ```env
 PORT=8080
 DB_HOST=localhost
@@ -24,24 +39,26 @@ DB_MIN_CONNECTIONS=10
 JWT_SECRET=your_jwt_secret
 ```
 
-## Getting Started
+2. Create database:
+```bash
+make db-create
+```
 
-1. Clone the repository
-2. Set up environment variables
-3. Run database migrations:
-   ```bash
-   make db-reset
-   ```
-4. Start the server:
-   ```bash
-   make run
-   ```
+3. Run the application:
+```bash
+make run
+```
 
-## API Endpoints
+## Testing the API
 
-### Authentication
+### 1. Health Check
+```bash
+curl http://localhost:8080/health
+```
 
-#### Register a New User
+### 2. Create Users
+
+Regular User:
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
@@ -52,7 +69,7 @@ curl -X POST http://localhost:8080/api/v1/auth/register \
   }'
 ```
 
-#### Register an Admin User
+Admin User:
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
@@ -64,7 +81,7 @@ curl -X POST http://localhost:8080/api/v1/auth/register \
   }'
 ```
 
-#### Login
+### 3. Login
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
@@ -74,34 +91,23 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
   }'
 ```
 
-### User Operations
+Save the token from the response for subsequent requests.
 
-#### Get User Details
+### 4. View User Details
 ```bash
-curl -X GET http://localhost:8080/api/v1/users/{user_id} \
+# Replace YOUR_JWT_TOKEN with the token from login/register
+curl -X GET http://localhost:8080/api/v1/users/1 \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
-#### Get All Users (Admin Only)
+### 5. List All Users (Admin Only)
 ```bash
+# Replace ADMIN_JWT_TOKEN with the admin's token
 curl -X GET http://localhost:8080/api/v1/users \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+  -H "Authorization: Bearer ADMIN_JWT_TOKEN"
 ```
 
-#### Change Password
-```bash
-curl -X POST http://localhost:8080/api/v1/users/change-password \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "current_password": "password123",
-    "new_password": "newpassword123"
-  }'
-```
-
-### Transaction Operations
-
-#### Transfer Credits
+### 6. Transfer Money
 ```bash
 curl -X POST http://localhost:8080/api/v1/transfer \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -113,16 +119,26 @@ curl -X POST http://localhost:8080/api/v1/transfer \
   }'
 ```
 
-#### Get Transaction History
+### 7. View Transaction History
 ```bash
-curl -X GET http://localhost:8080/api/v1/users/{user_id}/transactions \
+curl -X GET http://localhost:8080/api/v1/users/1/transactions \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
-#### Get Historical Balance
+## Development Commands
+
 ```bash
-curl -X GET "http://localhost:8080/api/v1/users/{user_id}/balance/historical?timestamp=2024-01-20T15:00:00Z" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+# Start the application with Docker
+docker compose up --build    # Start with build
+docker compose up -d        # Start in background
+docker compose down        # Stop containers
+
+# Local development commands
+make build                # Build the application
+make run                 # Run locally
+make db-reset           # Reset database
+make fmt               # Format code
+make lint             # Run linter
 ```
 
 ## Response Examples
@@ -140,18 +156,6 @@ curl -X GET "http://localhost:8080/api/v1/users/{user_id}/balance/historical?tim
 }
 ```
 
-### Successful Login
-```json
-{
-  "token": "eyJhbGc...",
-  "user": {
-    "id": 1,
-    "username": "testuser",
-    "role": "USER"
-  }
-}
-```
-
 ### User Details
 ```json
 {
@@ -163,39 +167,16 @@ curl -X GET "http://localhost:8080/api/v1/users/{user_id}/balance/historical?tim
 }
 ```
 
-### Successful Transfer
-```json
-{
-  "message": "Transfer successful",
-  "from_user": {
-    "id": 1,
-    "balance": 0.00
-  },
-  "to_user": {
-    "id": 2,
-    "balance": 100.00
-  },
-  "transaction": {
-    "id": 1,
-    "from_user_id": 1,
-    "to_user_id": 2,
-    "amount": 100.00,
-    "transaction_type": "TRANSFER",
-    "created_at": "2024-01-20T15:00:00Z"
-  }
-}
-```
+## Error Handling
 
-## Error Responses
-
-All error responses follow this format:
+All errors follow this format:
 ```json
 {
   "error": "Error message description"
 }
 ```
 
-Common HTTP status codes:
+Common status codes:
 - 200: Success
 - 201: Created
 - 400: Bad Request
@@ -204,13 +185,12 @@ Common HTTP status codes:
 - 404: Not Found
 - 500: Internal Server Error
 
-## Development
+## Stopping the Application
 
-### Available Make Commands
+If running with Docker:
 ```bash
-make build      # Build the application
-make run        # Run the application
-make db-reset   # Reset and migrate database
-make fmt        # Format code
-make lint       # Run linter
-``` 
+docker compose down   # Stop and remove containers
+```
+
+If running locally:
+Press `Ctrl+C` to stop the server 

@@ -8,6 +8,8 @@ import (
 
 // SetupRouter tells the server what to do when users visit different URLs
 func SetupRouter(r *gin.Engine) {
+	r.GET("/health", HealthCheck)
+
 	// group all our URLs under /api/v1
 	v1 := r.Group("/api/v1")
 	{
