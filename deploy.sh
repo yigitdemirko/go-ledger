@@ -1,26 +1,21 @@
 #!/bin/bash
 
 # Update system packages
-sudo apt-get update
-sudo apt-get upgrade -y
+sudo yum update -y
 
 # Install required packages
-sudo apt-get install -y \
-    apt-transport-https \
-    ca-certificates \
-    curl \
-    gnupg \
-    lsb-release \
+sudo yum install -y \
+    docker \
     nginx \
     certbot \
     python3-certbot-nginx
 
-# Install Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
+# Start and enable Docker
+sudo systemctl start docker
+sudo systemctl enable docker
 
 # Add current user to docker group
-sudo usermod -aG docker $USER
+sudo usermod -aG docker ec2-user
 
 # Install Docker Compose
 sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
@@ -66,7 +61,7 @@ volumes:
 EOL
 
 # Configure Nginx
-sudo tee /etc/nginx/sites-available/go-ledger << 'EOL'
+sudo tee /etc/nginx/conf.d/go-ledger.conf << 'EOL'
 server {
     listen 80;
     server_name _;
@@ -82,15 +77,15 @@ server {
 }
 EOL
 
-# Enable Nginx site
-sudo ln -s /etc/nginx/sites-available/go-ledger /etc/nginx/sites-enabled/
-sudo rm -f /etc/nginx/sites-enabled/default
+# Remove default Nginx config
+sudo rm -f /etc/nginx/conf.d/default.conf
 
 # Test Nginx configuration
 sudo nginx -t
 
-# Start Nginx
-sudo systemctl restart nginx
+# Start and enable Nginx
+sudo systemctl start nginx
+sudo systemctl enable nginx
 
 # Start the application
 sudo docker compose up -d

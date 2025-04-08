@@ -238,4 +238,29 @@ Press `Ctrl+C` to stop the server
 - Use strong passwords for the database
 - Regularly update system packages
 - Monitor application logs
-- Set up automated backups 
+- Set up automated backups
+
+## CI/CD
+
+This project uses GitHub Actions for continuous integration and deployment.
+
+### CI Pipeline
+- Runs on every push and pull request to main
+- Tests the application
+- Builds and pushes Docker image to Docker Hub
+
+### CD Pipeline
+- Runs on every push to main
+- Deploys the application to EC2
+
+### Setup
+1. Add these secrets to your GitHub repository:
+   - `DOCKERHUB_USERNAME`: Your Docker Hub username
+   - `DOCKERHUB_TOKEN`: Your Docker Hub access token
+   - `EC2_HOST`: Your EC2 instance public IP
+   - `EC2_SSH_KEY`: Your EC2 SSH private key
+
+2. Make sure your EC2 instance has:
+   - Docker and Docker Compose installed
+   - The application directory set up
+   - Proper security group settings 
