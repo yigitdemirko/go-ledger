@@ -124,4 +124,49 @@ func GetUserWithBalance(id int64, requiredBalance float64) (*User, error) {
 		return nil, err
 	}
 	return &user, nil
+}
+
+// InitializeUserBalance sets a user's initial balance
+func InitializeUserBalance(userID int, amount float64) error {
+	// get database connection
+	db := database.GetPool()
+	ctx := context.Background()
+
+	// start transaction
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	// update user balance
+	_, err = tx.Exec(ctx, `
+		UPDATE users 
+		SET balance = $1, 
+			updated_at = CURRENT_TIMESTAMP 
+		WHERE id = $2`,
+		amount, userID)
+	if err != nil {
+		return err
+	}
+
+	// create initial transaction
+	_, err = tx.Exec(ctx, `
+		INSERT INTO transactions (
+			from_user_id, 
+			to_user_id, 
+			amount, 
+			description
+		) VALUES ($1, $2, $3, $4)`,
+		nil, userID, amount, "Initial balance")
+	if err != nil {
+		return err
+	}
+
+	// commit transaction
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	return nil
 } 

@@ -383,3 +383,30 @@ func HealthCheck(c *gin.Context) {
 		"time":   time.Now().Format(time.RFC3339),
 	})
 }
+
+// InitializeBalance lets admins set a user's initial balance
+func InitializeBalance(c *gin.Context) {
+	// get user ID from URL
+	userID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	// get amount from request body
+	var req struct {
+		Amount float64 `json:"amount" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	// initialize balance
+	if err := models.InitializeUserBalance(userID, req.Amount); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Balance initialized successfully"})
+}

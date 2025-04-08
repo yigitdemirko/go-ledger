@@ -37,6 +37,9 @@ func SetupRouter(r *gin.Engine) {
 
 				// anyone logged in can change their password
 				users.POST("/change-password", ChangePassword)
+
+				// only admins can initialize balance
+				users.POST("/:id/initialize-balance", middleware.RequireRole(models.RoleAdmin), InitializeBalance)
 			}
 
 			// anyone logged in can send money
