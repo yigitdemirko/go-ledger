@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -137,7 +138,11 @@ func InitializeUserBalance(userID int, amount float64) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
+			log.Printf("Error rolling back transaction: %v", err)
+		}
+	}()
 
 	// update user balance
 	_, err = tx.Exec(ctx, `
@@ -155,10 +160,12 @@ func InitializeUserBalance(userID int, amount float64) error {
 		INSERT INTO transactions (
 			from_user_id, 
 			to_user_id, 
-			amount, 
-			description
-		) VALUES ($1, $2, $3, $4)`,
-		nil, userID, amount, "Initial balance")
+			amount,
+			transaction_type,
+			description,
+			created_at
+		) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)`,
+		nil, userID, amount, TransactionTypeDeposit, "Initial balance")
 	if err != nil {
 		return err
 	}

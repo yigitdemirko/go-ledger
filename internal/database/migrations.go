@@ -27,6 +27,7 @@ func CreateTables() error {
 			to_user_id INTEGER REFERENCES users(id),
 			amount DECIMAL(15,2) NOT NULL,
 			transaction_type VARCHAR(50) NOT NULL,
+			description TEXT,
 			created_at TIMESTAMP NOT NULL
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(from_user_id, to_user_id)`,

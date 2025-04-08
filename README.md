@@ -49,16 +49,23 @@ make db-create
 make run
 ```
 
-## Testing the API
+## API Endpoints
 
 ### 1. Health Check
 ```bash
 curl http://localhost:8080/health
 ```
+Response:
+```json
+{
+  "status": "ok",
+  "time": "2024-04-08T13:42:55+03:00"
+}
+```
 
-### 2. Create Users
+### 2. Authentication
 
-Regular User:
+#### Register User
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
@@ -69,7 +76,7 @@ curl -X POST http://localhost:8080/api/v1/auth/register \
   }'
 ```
 
-Admin User:
+#### Register Admin
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
@@ -81,7 +88,20 @@ curl -X POST http://localhost:8080/api/v1/auth/register \
   }'
 ```
 
-### 3. Login
+Response:
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": 1,
+    "name": "Test User",
+    "username": "testuser",
+    "role": "USER"
+  }
+}
+```
+
+#### Login
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
@@ -91,23 +111,71 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
   }'
 ```
 
-Save the token from the response for subsequent requests.
+### 3. User Management
 
-### 4. View User Details
+#### Get User Details
 ```bash
-# Replace YOUR_JWT_TOKEN with the token from login/register
 curl -X GET http://localhost:8080/api/v1/users/1 \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
-### 5. List All Users (Admin Only)
+Response:
+```json
+{
+  "id": 1,
+  "name": "Test User",
+  "balance": 1000.00,
+  "created_at": "2024-04-08T13:46:36.747086Z",
+  "updated_at": "2024-04-08T13:46:42.630252Z"
+}
+```
+
+#### List All Users (Admin Only)
 ```bash
-# Replace ADMIN_JWT_TOKEN with the admin's token
 curl -X GET http://localhost:8080/api/v1/users \
   -H "Authorization: Bearer ADMIN_JWT_TOKEN"
 ```
 
-### 6. Transfer Money
+Response:
+```json
+[
+  {
+    "id": 1,
+    "name": "Test User",
+    "balance": 1000.00,
+    "created_at": "2024-04-08T13:46:36.747086Z",
+    "updated_at": "2024-04-08T13:46:42.630252Z"
+  },
+  {
+    "id": 2,
+    "name": "Admin User",
+    "balance": 0.00,
+    "created_at": "2024-04-08T13:44:28.286444Z",
+    "updated_at": "2024-04-08T13:44:28.286444Z"
+  }
+]
+```
+
+#### Initialize User Balance (Admin Only)
+```bash
+curl -X POST http://localhost:8080/api/v1/users/1/initialize-balance \
+  -H "Authorization: Bearer ADMIN_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 1000.00
+  }'
+```
+
+Response:
+```json
+{
+  "message": "Balance initialized successfully"
+}
+```
+
+### 4. Transactions
+
+#### Transfer Money
 ```bash
 curl -X POST http://localhost:8080/api/v1/transfer \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -115,14 +183,116 @@ curl -X POST http://localhost:8080/api/v1/transfer \
   -d '{
     "from_user_id": 1,
     "to_user_id": 2,
-    "amount": 100.00
+    "amount": 200.00
   }'
 ```
 
-### 7. View Transaction History
+Response:
+```json
+{
+  "message": "Transfer successful",
+  "from_user": {
+    "id": 1,
+    "balance": 800.00
+  },
+  "to_user": {
+    "id": 2,
+    "balance": 700.00
+  },
+  "transaction": {
+    "id": 3,
+    "from_user_id": 1,
+    "to_user_id": 2,
+    "amount": 200.00,
+    "transaction_type": "TRANSFER",
+    "created_at": "2024-04-08T13:47:45.724064Z"
+  }
+}
+```
+
+#### View Transaction History
 ```bash
 curl -X GET http://localhost:8080/api/v1/users/1/transactions \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+Response:
+```json
+[
+  {
+    "id": 3,
+    "from_user_id": 1,
+    "to_user_id": 2,
+    "amount": 200.00,
+    "transaction_type": "TRANSFER",
+    "created_at": "2024-04-08T13:47:45.724064Z"
+  },
+  {
+    "id": 1,
+    "from_user_id": null,
+    "to_user_id": 1,
+    "amount": 1000.00,
+    "transaction_type": "DEPOSIT",
+    "created_at": "2024-04-08T13:46:42.630252Z"
+  }
+]
+```
+
+#### Get Historical Balance
+```bash
+curl -X GET "http://localhost:8080/api/v1/users/1/balance/historical?timestamp=2024-04-08T13:47:00Z" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+Response:
+```json
+{
+  "balance": 1000.00,
+  "timestamp": "2024-04-08T13:47:00Z"
+}
+```
+
+### 5. Account Management
+
+#### Change Password
+```bash
+curl -X POST http://localhost:8080/api/v1/users/change-password \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "current_password": "password123",
+    "new_password": "newpassword123"
+  }'
+```
+
+Response:
+```json
+{
+  "message": "Password updated successfully"
+}
+```
+
+## Error Responses
+
+### Insufficient Balance
+```json
+{
+  "error": "Source user not found or insufficient balance"
+}
+```
+
+### Unauthorized Access
+```json
+{
+  "error": "Insufficient permissions"
+}
+```
+
+### Invalid Request
+```json
+{
+  "error": "Invalid request body"
+}
 ```
 
 ## Development Commands
@@ -140,60 +310,6 @@ make db-reset           # Reset database
 make fmt               # Format code
 make lint             # Run linter
 ```
-
-## Response Examples
-
-### Successful Registration
-```json
-{
-  "token": "eyJhbGc...",
-  "user": {
-    "id": 1,
-    "name": "Test User",
-    "username": "testuser",
-    "role": "USER"
-  }
-}
-```
-
-### User Details
-```json
-{
-  "id": 1,
-  "name": "Test User",
-  "balance": 100.00,
-  "created_at": "2024-01-20T15:00:00Z",
-  "updated_at": "2024-01-20T15:00:00Z"
-}
-```
-
-## Error Handling
-
-All errors follow this format:
-```json
-{
-  "error": "Error message description"
-}
-```
-
-Common status codes:
-- 200: Success
-- 201: Created
-- 400: Bad Request
-- 401: Unauthorized
-- 403: Forbidden
-- 404: Not Found
-- 500: Internal Server Error
-
-## Stopping the Application
-
-If running with Docker:
-```bash
-docker compose down   # Stop and remove containers
-```
-
-If running locally:
-Press `Ctrl+C` to stop the server
 
 ## Deployment
 
@@ -238,29 +354,4 @@ Press `Ctrl+C` to stop the server
 - Use strong passwords for the database
 - Regularly update system packages
 - Monitor application logs
-- Set up automated backups
-
-## CI/CD
-
-This project uses GitHub Actions for continuous integration and deployment.
-
-### CI Pipeline
-- Runs on every push and pull request to main
-- Tests the application
-- Builds and pushes Docker image to Docker Hub
-
-### CD Pipeline
-- Runs on every push to main
-- Deploys the application to EC2
-
-### Setup
-1. Add these secrets to your GitHub repository:
-   - `DOCKERHUB_USERNAME`: Your Docker Hub username
-   - `DOCKERHUB_TOKEN`: Your Docker Hub access token
-   - `EC2_HOST`: Your EC2 instance public IP
-   - `EC2_SSH_KEY`: Your EC2 SSH private key
-
-2. Make sure your EC2 instance has:
-   - Docker and Docker Compose installed
-   - The application directory set up
-   - Proper security group settings 
+- Set up automated backups 
