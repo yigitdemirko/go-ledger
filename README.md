@@ -193,4 +193,49 @@ docker compose down   # Stop and remove containers
 ```
 
 If running locally:
-Press `Ctrl+C` to stop the server 
+Press `Ctrl+C` to stop the server
+
+## Deployment
+
+### AWS EC2 Setup
+
+1. Create an AWS account and launch an EC2 instance:
+   - Go to AWS Console > EC2 > Launch Instance
+   - Choose Ubuntu Server 22.04 LTS
+   - Select t2.micro (free tier eligible)
+   - Configure security group to allow:
+     - SSH (port 22)
+     - HTTP (port 80)
+     - HTTPS (port 443)
+   - Launch instance and download key pair
+
+2. Connect to your EC2 instance:
+   ```bash
+   chmod 400 your-key-pair.pem
+   ssh -i your-key-pair.pem ubuntu@your-ec2-public-ip
+   ```
+
+3. Deploy the application:
+   ```bash
+   # Copy your application files to the server
+   scp -i your-key-pair.pem -r . ubuntu@your-ec2-public-ip:/opt/go-ledger/
+
+   # Make the deployment script executable and run it
+   ssh -i your-key-pair.pem ubuntu@your-ec2-public-ip
+   cd /opt/go-ledger
+   chmod +x deploy.sh
+   ./deploy.sh
+   ```
+
+4. Set up HTTPS:
+   ```bash
+   sudo certbot --nginx
+   ```
+
+### Security Considerations
+
+- Update the JWT_SECRET in docker-compose.yml
+- Use strong passwords for the database
+- Regularly update system packages
+- Monitor application logs
+- Set up automated backups 
